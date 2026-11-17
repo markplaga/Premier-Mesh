@@ -49,7 +49,7 @@
 
   let nodes = [], edges = [], pointers = new Map(), width = 1, height = 1, dpr = 1;
   let rotX = -.12, rotY = .3, lastTime = performance.now(), elapsed = 0, frameCount = 0, fpsTime = lastTime;
-  let lastPinch = null, topologyPending = false, objectUrl = null, recorder = null, chunks = [], toastTimer = null;
+  let lastTap = null, lastPinch = null, topologyPending = false, objectUrl = null, recorder = null, chunks = [], toastTimer = null;
 
   function vec(x=0,y=0,z=0){ return {x,y,z}; }
   function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
@@ -287,6 +287,12 @@
 
   canvas.addEventListener('pointerdown',(e)=>{
     if(isImmersive()&&e.clientY<Math.max(64,window.innerHeight*.12)){e.preventDefault();revealUI();return;}
+    // Double tap / double click anywhere on the mesh in 3D view: apply a new random theme.
+    if(state.stereo!=='off'&&pointers.size===0){
+      const now=e.timeStamp;
+      if(lastTap&&now-lastTap.t<320&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<40){lastTap=null;e.preventDefault();randomTheme();return;}
+      lastTap={t:now,x:e.clientX,y:e.clientY};
+    }
     e.preventDefault();canvas.setPointerCapture(e.pointerId);const p=pointFromEvent(e),off=paneOffsetAt(p.x),near=nearestNode(p.x-off,p.y);
     const paneW=panes()[0].w, threshold=Math.max(62,Math.min(paneW,height)*.12);
     pointers.set(e.pointerId,{x:p.x,y:p.y,lastX:p.x,lastY:p.y,startX:p.x,startY:p.y,node:near.index,mode:near.distance<threshold?'pull':'rotate'});
@@ -412,7 +418,13 @@
   const panel=$('controlPanel');$('panelHandle').addEventListener('click',()=>panel.classList.toggle('open'));$('panelClose').addEventListener('click',()=>panel.classList.remove('open'));
   $('dismissHint').addEventListener('click',()=>$('gestureHint').classList.add('hidden'));
   $('resetBtn').addEventListener('click',()=>{rotX=-.12;rotY=.3;nodes.forEach(n=>{n.pos=vec(n.base.x,n.base.y,n.base.z);n.vel=vec();});showToast('Mesh reset');});
-  $('randomizeBtn').addEventListener('click',()=>applyTheme(Math.floor(Math.random()*themes.length)));
+  function randomTheme(){
+    const current=themes.findIndex(t=>t.name===state.theme);
+    let i=Math.floor(Math.random()*themes.length);
+    if(themes.length>1&&i===current)i=(i+1+Math.floor(Math.random()*(themes.length-1)))%themes.length;
+    applyTheme(i);
+  }
+  $('randomizeBtn').addEventListener('click',randomTheme);
   $('fullscreenBtn').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();}catch{showToast('Fullscreen is unavailable');}});
 
   $('videoFile').addEventListener('change',e=>{
