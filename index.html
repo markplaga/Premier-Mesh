@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#07090f">
+  <meta name="description" content="Touch, stretch, illuminate, and film a living digital mesh.">
+  <title>Premier Mesh</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23080a10'/%3E%3Cg fill='none' stroke='%236ee7ff' stroke-width='3'%3E%3Cpath d='M13 39 25 17l22 3 5 25-27 6Z'/%3E%3Cpath d='m13 39 34-19M25 17l27 28M25 51l22-31'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='13' cy='39' r='3'/%3E%3Ccircle cx='25' cy='17' r='3'/%3E%3Ccircle cx='47' cy='20' r='3'/%3E%3Ccircle cx='52' cy='45' r='3'/%3E%3Ccircle cx='25' cy='51' r='3'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand" aria-label="Premier Mesh">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true"><path d="M7 24 15 8l18 4 1 18-20 4Z"/><path d="M7 24 33 12M15 8l19 22M14 34l19-22"/><circle cx="7" cy="24" r="2.4"/><circle cx="15" cy="8" r="2.4"/><circle cx="33" cy="12" r="2.4"/><circle cx="34" cy="30" r="2.4"/><circle cx="14" cy="34" r="2.4"/></svg>
+        <div><strong>Premier Mesh</strong><span>Live sculpture studio</span></div>
+      </div>
+      <div class="top-actions">
+        <label class="button primary" for="videoFile"><span>＋</span> Video</label>
+        <input id="videoFile" type="file" accept="video/*" hidden>
+        <button class="button icon" id="randomizeBtn" title="Randomize" aria-label="Randomize">✦</button>
+        <button class="button icon" id="resetBtn" title="Reset mesh" aria-label="Reset mesh">↺</button>
+        <button class="button icon" id="fullscreenBtn" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+        <button class="button icon stereo-toggle" id="stereoBtn" title="Stereo view: Off" aria-label="Stereo view: Off">3D</button>
+      </div>
+    </header>
+
+    <section class="studio">
+      <div class="stage" id="stage">
+        <canvas id="meshCanvas" aria-label="Interactive mesh canvas. Drag nodes with one or more fingers to reshape the mesh."></canvas>
+        <video id="videoSource" playsinline loop muted hidden></video>
+        <div class="stage-badge"><span id="nodeReadout">90 nodes</span><i></i><span id="edgeReadout">360 edges</span><i></i><span id="fpsReadout">60 fps</span></div>
+        <div class="gesture-hint" id="gestureHint">
+          <strong>Touch the mesh</strong>
+          <span>Pull several points at once · Pinch to zoom</span>
+          <button id="dismissHint" aria-label="Dismiss instructions">×</button>
+        </div>
+        <div class="video-bar" id="videoBar" hidden>
+          <button id="videoPlay" aria-label="Play or pause video">▶</button>
+          <span id="videoName">Video</span>
+          <select id="videoMode" aria-label="Video mapping mode">
+            <option value="portal">Portal</option>
+            <option value="facets">Faceted</option>
+            <option value="inner">Inner projection</option>
+            <option value="edges">Edge color</option>
+          </select>
+          <button id="videoMute" aria-label="Mute or unmute video">Muted</button>
+          <button id="videoRemove" aria-label="Remove video">×</button>
+        </div>
+        <div class="capture-actions">
+          <button class="button ghost" id="savePngBtn">Capture PNG</button>
+          <button class="button ghost" id="recordBtn">Record</button>
+          <button class="button ghost" id="saveProjectBtn">Save</button>
+        </div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
+
+      <aside class="control-panel" id="controlPanel">
+        <div class="panel-handle" id="panelHandle" aria-hidden="true"></div>
+        <div class="panel-head">
+          <div><span class="eyebrow">Current theme</span><h1 id="themeTitle">Electric Orbit</h1></div>
+          <button class="button icon panel-close" id="panelClose" aria-label="Close controls">⌄</button>
+        </div>
+
+        <nav class="tabs" aria-label="Control sections">
+          <button class="tab active" data-tab="themes">Themes</button>
+          <button class="tab" data-tab="form">Form</button>
+          <button class="tab" data-tab="light">Light</button>
+          <button class="tab" data-tab="motion">Motion</button>
+          <button class="tab" data-tab="stereo">3D</button>
+        </nav>
+
+        <div class="tab-panel active" id="tab-themes">
+          <div class="theme-grid" id="themeGrid"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-form">
+          <div class="field split">
+            <label>Shape<select id="shapeSelect"></select></label>
+            <label>Connections<select id="styleSelect"></select></label>
+          </div>
+          <div class="field"><div class="field-label"><label for="complexity">Complexity</label><output id="complexityOut">90 nodes</output></div><input id="complexity" type="range" min="12" max="300" value="90"></div>
+          <div class="field"><div class="field-label"><label for="density">Connection density</label><output id="densityOut">4</output></div><input id="density" type="range" min="2" max="14" value="4"></div>
+          <div class="field"><div class="field-label"><label for="thickness">Line thickness</label><output id="thicknessOut">1.2</output></div><input id="thickness" type="range" min="0.3" max="8" step="0.1" value="1.2"></div>
+          <div class="field"><div class="field-label"><label for="nodeSize">Node size</label><output id="nodeSizeOut">2.2</output></div><input id="nodeSize" type="range" min="0" max="10" step="0.1" value="2.2"></div>
+          <div class="field"><div class="field-label"><label for="zoom">Zoom</label><output id="zoomOut">1.20×</output></div><input id="zoom" type="range" min="0.25" max="8" step="0.05" value="1.2"></div>
+          <div class="toggle-row"><label><input id="showNodes" type="checkbox" checked><span></span>Show nodes</label><label><input id="holdDeform" type="checkbox"><span></span>Hold form</label></div>
+        </div>
+
+        <div class="tab-panel" id="tab-light">
+          <div class="color-row"><label>Lines<input id="lineColor" type="color" value="#62e6ff"></label><label>Nodes<input id="nodeColor" type="color" value="#f5fbff"></label><label>Background<input id="bgColor" type="color" value="#07090f"></label></div>
+          <div class="field"><div class="field-label"><label for="intensity">Line intensity</label><output id="intensityOut">88%</output></div><input id="intensity" type="range" min="5" max="100" value="88"></div>
+          <div class="field"><div class="field-label"><label for="glow">Glow amount</label><output id="glowOut">62%</output></div><input id="glow" type="range" min="0" max="100" value="62"></div>
+          <div class="field"><div class="field-label"><label for="glowRadius">Glow spread</label><output id="glowRadiusOut">24</output></div><input id="glowRadius" type="range" min="0" max="60" value="24"></div>
+          <div class="field"><div class="field-label"><label for="falloff">Tip falloff</label><output id="falloffOut">48%</output></div><input id="falloff" type="range" min="0" max="100" value="48"></div>
+          <div class="field"><div class="field-label"><label for="softness">Edge softness</label><output id="softnessOut">40%</output></div><input id="softness" type="range" min="0" max="100" value="40"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-motion">
+          <div class="field"><div class="field-label"><label for="pullStrength">Pull strength</label><output id="pullStrengthOut">72%</output></div><input id="pullStrength" type="range" min="5" max="100" value="72"></div>
+          <div class="field"><div class="field-label"><label for="pullRadius">Pull radius</label><output id="pullRadiusOut">32%</output></div><input id="pullRadius" type="range" min="1" max="100" value="32"></div>
+          <div class="field"><div class="field-label"><label for="spring">Spring</label><output id="springOut">42%</output></div><input id="spring" type="range" min="0" max="100" value="42"></div>
+          <div class="field"><div class="field-label"><label for="damping">Damping</label><output id="dampingOut">88%</output></div><input id="damping" type="range" min="50" max="99" value="88"></div>
+          <div class="field"><div class="field-label"><label for="motion">Ambient motion</label><output id="motionOut">35%</output></div><input id="motion" type="range" min="0" max="100" value="35"></div>
+          <div class="field"><div class="field-label"><label for="rotation">Auto rotation</label><output id="rotationOut">18%</output></div><input id="rotation" type="range" min="0" max="100" value="18"></div>
+          <div class="toggle-row"><label><input id="reducedMotion" type="checkbox"><span></span>Reduced motion</label></div>
+        </div>
+
+        <div class="tab-panel" id="tab-stereo">
+          <div class="field">
+            <div class="field-label"><label>Stereo view</label></div>
+            <div class="segmented" id="stereoMode" role="radiogroup" aria-label="Stereo view">
+              <button data-mode="off" role="radio" aria-checked="true" class="active">Off</button>
+              <button data-mode="cross" role="radio" aria-checked="false">Cross-eyed</button>
+              <button data-mode="parallel" role="radio" aria-checked="false">Parallel</button>
+            </div>
+            <p class="help-text" id="stereoHelp"></p>
+          </div>
+          <div class="field"><div class="field-label"><label for="eyeSep">3D depth</label><output id="eyeSepOut">40%</output></div><input id="eyeSep" type="range" min="0" max="100" value="40"></div>
+          <div class="field"><div class="field-label"><label for="stereoPlane">Screen plane</label><output id="stereoPlaneOut">Screen</output></div><input id="stereoPlane" type="range" min="-100" max="100" value="0"><div class="range-ends"><span>Sinks in</span><span>Pops out</span></div></div>
+          <div class="field"><div class="field-label"><label for="paneSize">Pair width</label><output id="paneSizeOut">100%</output></div><input id="paneSize" type="range" min="30" max="100" value="100"></div>
+          <div class="toggle-row"><label><input id="stereoDots" type="checkbox" checked><span></span>Alignment dots</label></div>
+        </div>
+      </aside>
+      <button class="open-panel" id="openPanel">Controls</button>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
