@@ -347,12 +347,19 @@
     document.querySelectorAll('#stereoMode button').forEach(b=>{const on=b.dataset.mode===mode;b.classList.toggle('active',on);b.setAttribute('aria-checked',on);});
     $('stereoHelp').textContent=stereoHelp[mode];
     stage.classList.toggle('stereo',mode!=='off');
+    $('panelToggleBtn').hidden=mode==='off';if(mode==='off')setPanelHidden(false);
     const btn=$('stereoBtn');btn.classList.toggle('on',mode!=='off');btn.setAttribute('aria-label',`Stereo view: ${stereoLabels[mode]}`);btn.title=`Stereo view: ${stereoLabels[mode]}`;
     if(announce){
       if(mode==='off')showToast('Stereo off');
       else showToast(`${stereoLabels[mode]} stereo${height>width?' · turn sideways for a bigger pair':''}`);
     }
   }
+  function setPanelHidden(hide){
+    document.querySelector('.studio').classList.toggle('panel-hidden',hide);
+    const b=$('panelToggleBtn');b.classList.toggle('on',hide);b.setAttribute('aria-pressed',hide);
+    b.title=b.ariaLabel=hide?'Show controls':'Hide controls';b.setAttribute('aria-label',b.title);
+  }
+  $('panelToggleBtn').addEventListener('click',()=>setPanelHidden(!document.querySelector('.studio').classList.contains('panel-hidden')));
   $('stereoMode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setStereo(b.dataset.mode);});
   $('stereoBtn').addEventListener('click',()=>setStereo(stereoModes[(stereoModes.indexOf(state.stereo)+1)%stereoModes.length]));
   function syncStereo(){
