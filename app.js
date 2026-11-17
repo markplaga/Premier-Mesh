@@ -286,6 +286,7 @@
   }
 
   canvas.addEventListener('pointerdown',(e)=>{
+    if(isImmersive()&&e.clientY<Math.max(64,window.innerHeight*.12)){e.preventDefault();revealUI();return;}
     e.preventDefault();canvas.setPointerCapture(e.pointerId);const p=pointFromEvent(e),off=paneOffsetAt(p.x),near=nearestNode(p.x-off,p.y);
     const paneW=panes()[0].w, threshold=Math.max(62,Math.min(paneW,height)*.12);
     pointers.set(e.pointerId,{x:p.x,y:p.y,lastX:p.x,lastY:p.y,startX:p.x,startY:p.y,node:near.index,mode:near.distance<threshold?'pull':'rotate'});
@@ -325,6 +326,31 @@
   [['lineColor','line'],['nodeColor','node'],['bgColor','bg']].forEach(([id,key])=>$(id).addEventListener('input',e=>{state[key]=e.target.value;state.theme='Custom';$('themeTitle').textContent='Custom';}));
   $('showNodes').addEventListener('change',e=>state.showNodes=e.target.checked);$('holdDeform').addEventListener('change',e=>state.hold=e.target.checked);$('reducedMotion').addEventListener('change',e=>state.reduced=e.target.checked);
 
+  // ---------- Immersive mode: in fullscreen 3D, hide the interface after 10s idle ----------
+  const UI_HIDE_MS=10000;
+  let uiTimer=null, immersiveTipShown=false;
+  function isFullView(){
+    return !!(document.fullscreenElement||document.webkitFullscreenElement)
+      ||window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  }
+  function immersiveEligible(){ return state.stereo!=='off'&&isFullView(); }
+  function isImmersive(){ return document.body.classList.contains('immersive'); }
+  function setImmersive(on){
+    document.body.classList.toggle('immersive',on);
+    if(on&&!immersiveTipShown){immersiveTipShown=true;showToast('Tap the top edge to show controls');}
+  }
+  function scheduleHide(){
+    clearTimeout(uiTimer);uiTimer=null;
+    if(!immersiveEligible()){setImmersive(false);return;}
+    uiTimer=setTimeout(()=>{if(immersiveEligible())setImmersive(true);},UI_HIDE_MS);
+  }
+  function revealUI(){ setImmersive(false);scheduleHide(); }
+  // Any touch on the interface (not the mesh) keeps it visible for another 10s.
+  document.addEventListener('pointerdown',e=>{if(!isImmersive()&&!e.target.closest('#meshCanvas'))scheduleHide();},true);
+  document.addEventListener('input',()=>{if(!isImmersive())scheduleHide();},true);
+  document.addEventListener('fullscreenchange',scheduleHide);
+  document.addEventListener('webkitfullscreenchange',scheduleHide);
+
   // ---------- Stereo controls (not part of themes) ----------
   const stereoModes=['off','cross','parallel'];
   const stereoLabels={off:'Off',parallel:'Parallel',cross:'Cross-eyed'};
@@ -348,6 +374,7 @@
     $('stereoHelp').textContent=stereoHelp[mode];
     stage.classList.toggle('stereo',mode!=='off');
     $('panelToggleBtn').hidden=mode==='off';if(mode==='off')setPanelHidden(false);
+    scheduleHide();
     const btn=$('stereoBtn');btn.classList.toggle('on',mode!=='off');btn.setAttribute('aria-label',`Stereo view: ${stereoLabels[mode]}`);btn.title=`Stereo view: ${stereoLabels[mode]}`;
     if(announce){
       if(mode==='off')showToast('Stereo off');
