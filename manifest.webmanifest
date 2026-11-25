@@ -1,0 +1,24 @@
+{
+  "name": "Premier Mesh",
+  "short_name": "Premier Mesh",
+  "description": "Touch, stretch, illuminate, and film a living digital mesh.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "categories": [
+    "entertainment",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
