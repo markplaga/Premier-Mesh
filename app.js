@@ -41,6 +41,9 @@
     showNodes:true, hold:false, reduced:false, theme:'Electric Orbit', videoMode:'portal',
     stereo:'off', eyeSep:40, stereoPlane:0, paneSize:100, stereoDots:true
   };
+  // PWA-UPDATE-SYSTEM v2: pristine copy of the startup settings, so
+  // the update bridge can tell a fresh load from a changed mesh.
+  const DEFAULT_STATE = JSON.parse(JSON.stringify(state));
 
   // Camera distance in mesh units (matches the original 3.6 / (3.6 - z*.62) perspective)
   const CAM = 3.6 / .62;
@@ -436,7 +439,38 @@
   $('videoRemove').addEventListener('click',()=>{video.pause();video.removeAttribute('src');video.load();if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=null;$('videoBar').hidden=true;$('videoFile').value='';showToast('Video removed');});
 
   $('savePngBtn').addEventListener('click',()=>{const a=document.createElement('a');a.download=`premier-mesh-${state.stereo!=='off'?state.stereo+'-stereo-':''}${Date.now()}.png`;a.href=canvas.toDataURL('image/png');a.click();showToast('PNG captured');});
-  $('saveProjectBtn').addEventListener('click',()=>{localStorage.setItem('premierMeshProject',JSON.stringify(state));showToast('Project saved on this device');});
+  // PWA-UPDATE-SYSTEM v2 bridge: the update script is a separate
+  // <script> and cannot see inside this IIFE, so expose only what an
+  // update needs. save: writes the current settings to localStorage
+  // (key premierMeshProject). NOTE: the app never reads that key back
+  // on startup, so a reload still restarts at the default theme —
+  // isDirty therefore reports any deviation from a fresh load, so the
+  // update asks first instead of silently resetting the mesh. A
+  // loaded video, a recording in progress, pulled nodes, or changed
+  // settings all count as dirty: the video file and the mesh
+  // deformation live only in memory and a reload would lose them.
+  function saveProject(){
+    try { localStorage.setItem('premierMeshProject', JSON.stringify(state)); showToast('Project saved on this device'); }
+    catch (e) { showToast('Could not save the project'); }
+  }
+  function isDirty(){
+    try {
+      if (video.src) return true;
+      if (recorder && recorder.state === 'recording') return true;
+      for (const n of nodes) {
+        const dx = n.pos.x - n.base.x, dy = n.pos.y - n.base.y, dz = n.pos.z - n.base.z;
+        if (dx*dx + dy*dy + dz*dz > 0.0001) return true;
+      }
+      let saved = null;
+      try { saved = JSON.parse(localStorage.getItem('premierMeshProject') || 'null'); } catch (e) {}
+      return JSON.stringify(state) !== JSON.stringify(saved || DEFAULT_STATE);
+    } catch (e) { return true; }
+  }
+  window.__premierMeshUpdate = {
+    save: () => { saveProject(); },
+    isDirty: () => isDirty()
+  };
+  $('saveProjectBtn').addEventListener('click', saveProject);
   $('recordBtn').addEventListener('click',()=>{
     if(!window.MediaRecorder||!canvas.captureStream){showToast('Recording is unavailable');return;}
     if(recorder&&recorder.state==='recording'){recorder.stop();return;}
